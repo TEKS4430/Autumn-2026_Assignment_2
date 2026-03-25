@@ -15,7 +15,8 @@ services:
       context: ./docker
       dockerfile: Dockerfile
     image: course-ros2:jazzy
-    container_name: ros2_course
+    # Let Docker Compose generate container names to avoid
+    # conflicts when multiple instances or previous containers exist.
 
     # Forces amd64 on all platforms for consistent ROS2 packages.
     # Apple Silicon (M1/M2/M3): Docker Desktop emulates via Rosetta.
