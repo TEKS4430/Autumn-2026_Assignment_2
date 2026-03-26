@@ -1,101 +1,104 @@
 #!/usr/bin/env python3
-"""
-assignment.launch.py
-
-Launches all nodes for the sensing assignment.
-
-What gets launched:
-    1. WebotsController for TurtleBot3  — bridges robot ↔ ROS2 topics
-    2. WebotsController for Supervisor  — provides ground truth pose
-    3. noise_injector    (PROVIDED)     — adds drift/noise to sensors
-    4. motion_controller (PROVIDED)     — waits for /start_driving service
-    5. task1_observer    (STUDENT)      — sensor observation
-    6. task2_filter      (STUDENT)      — sensor filtering
-    7. task3_fusion      (STUDENT)      — pose fusion
-
-Usage:
-    ros2 launch sensing_assignment assignment.launch.py
-
-Then start the robot driving:
-    ros2 service call /start_driving std_srvs/srv/Trigger {}
-"""
-
 import os
 import launch
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 from webots_ros2_driver.webots_controller import WebotsController
-from webots_ros2_driver.utils import controller_url_prefix
+from webots_ros2_driver.wait_for_controller_connection import (
+    WaitForControllerConnection,
+)
 
 
 def generate_launch_description():
 
     package_dir = get_package_share_directory("sensing_assignment")
-    robot_urdf = os.path.join(package_dir, "resource", "turtlebot_webots.urdf")
 
-    # ── Webots host (set via WEBOTS_HOST env var) ─────────────
-    webots_host = os.environ.get("WEBOTS_HOST", "localhost")
+    robot_description_path = os.path.join(
+        package_dir, "resource", "TurtleBot3Burger.urdf"
+    )
+    ros2_control_params = os.path.join(package_dir, "resource", "ros2control.yml")
 
-    # ── 1. TurtleBot3 controller ──────────────────────────────
-    # Bridges Webots TurtleBot3 robot ↔ ROS2 topics:
-    #   /scan, /imu, /odom, /camera/image_raw, /camera/depth/image_raw
+    # Minimal robot_state_publisher — driver fills it in via
+    # set_robot_state_publisher: True
+    robot_state_publisher = Node(
+        package="robot_state_publisher",
+        executable="robot_state_publisher",
+        output="screen",
+        parameters=[{"robot_description": '<robot name=""><link name=""/></robot>'}],
+    )
+
+    # Static transform base_link → base_footprint
+    footprint_publisher = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        output="screen",
+        arguments=["0", "0", "0", "0", "0", "0", "base_link", "base_footprint"],
+    )
+
+    # TurtleBot3 driver — connects to Webots and sets up all topics
     turtlebot_driver = WebotsController(
         robot_name="TurtleBot3Burger",
         parameters=[
-            {"robot_description": robot_urdf},
-            {"use_sim_time": True},
+            {
+                "robot_description": robot_description_path,
+                "use_sim_time": True,
+                "set_robot_state_publisher": True,
+            },
+            ros2_control_params,
         ],
-        env={
-            "WEBOTS_CONTROLLER_URL": f"tcp://{webots_host}:1234/TurtleBot3Burger",
-        },
-    )
-
-    # ── 2. Supervisor controller ──────────────────────────────
-    # Reads true robot position from Webots and publishes /ground_truth_pose
-    supervisor_driver = WebotsController(
-        robot_name="supervisor",
-        parameters=[
-            {"use_sim_time": True},
+        remappings=[
+            ("/diffdrive_controller/cmd_vel", "/cmd_vel"),
+            ("/diffdrive_controller/odom", "/odom"),
         ],
-        env={
-            "WEBOTS_CONTROLLER_URL": f"tcp://{webots_host}:1234/supervisor",
-        },
-    )
-
-    # ── 3. Noise injector (PROVIDED) ──────────────────────────
-    noise_injector = Node(
-        package="sensing_assignment",
-        executable="noise_injector",
-        name="noise_injector",
+        respawn=True,
         output="screen",
     )
 
-    # ── 4. Motion controller (PROVIDED) ───────────────────────
+    # Spawn controllers — use WaitForControllerConnection so they
+    # start only after the driver is ready
+    diffdrive_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["diffdrive_controller", "--controller-manager-timeout", "50"],
+        output="screen",
+    )
+    joint_state_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["joint_state_broadcaster", "--controller-manager-timeout", "50"],
+        output="screen",
+    )
+
+    waiting_nodes = WaitForControllerConnection(
+        target_driver=turtlebot_driver,
+        nodes_to_start=[diffdrive_spawner, joint_state_spawner],
+    )
+
     motion_controller = Node(
         package="sensing_assignment",
         executable="motion_controller",
         name="motion_controller",
         output="screen",
     )
-
-    # ── 5. Task 1 — sensor observer (STUDENT) ─────────────────
+    noise_injector = Node(
+        package="sensing_assignment",
+        executable="noise_injector",
+        name="noise_injector",
+        output="screen",
+    )
     task1_observer = Node(
         package="sensing_assignment",
         executable="task1_observer",
         name="task1_observer",
         output="screen",
     )
-
-    # ── 6. Task 2 — sensor filter (STUDENT) ───────────────────
     task2_filter = Node(
         package="sensing_assignment",
         executable="task2_filter",
         name="task2_filter",
         output="screen",
     )
-
-    # ── 7. Task 3 — pose fusion (STUDENT) ─────────────────────
     task3_fusion = Node(
         package="sensing_assignment",
         executable="task3_fusion",
@@ -105,17 +108,15 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            # Webots controllers first
+            robot_state_publisher,
+            footprint_publisher,
             turtlebot_driver,
-            supervisor_driver,
-            # Provided nodes
-            noise_injector,
+            waiting_nodes,
             motion_controller,
-            # Student nodes
-            # task1_observer,
-            # task2_filter,
-            # task3_fusion,
-            # Shutdown all nodes when Webots closes
+            noise_injector,
+            task1_observer,
+            task2_filter,
+            task3_fusion,
             launch.actions.RegisterEventHandler(
                 event_handler=launch.event_handlers.OnProcessExit(
                     target_action=turtlebot_driver,

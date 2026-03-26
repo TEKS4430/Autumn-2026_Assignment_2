@@ -2,175 +2,92 @@
 """
 motion_controller.py  — PROVIDED, do not modify.
 
-Controls the TurtleBot3 to drive in a circle using direct motor
-velocity commands. Also reads wheel encoders to compute a simple
-dead-reckoning position estimate and prints it to the console,
-so students can observe how odometry drifts over time.
+Drives the TurtleBot3 in a circle by publishing to /cmd_vel.
+Uses a slightly different linear/angular ratio to intentionally
+introduce drift — the robot spirals rather than making a perfect circle.
 
-This node runs as a Webots robot controller (WebotsController),
-meaning it has direct access to Webots devices.
+This runs as a regular ROS2 node (no direct Webots access needed).
+Motor commands go through /cmd_vel → TurtleBot3 driver → Webots motors.
 
 Usage:
-    This node starts but waits for the 'start_driving' ROS2 service.
-    Students trigger it with:
+    Start driving:
         ros2 service call /start_driving std_srvs/srv/Trigger {}
-    Stop with:
+    Stop:
         ros2 service call /stop_driving std_srvs/srv/Trigger {}
 """
-import math
+
 import rclpy
 from rclpy.node import Node
 from std_srvs.srv import Trigger
-from geometry_msgs.msg import Point
-
-
-# Webots robot controller interface
-from vehicle import Driver  # only available inside WebotsController context
-
-
-# ── Robot physical parameters (TurtleBot3 Burger) ────────────
-WHEEL_RADIUS = 0.033  # meters
-WHEEL_DISTANCE = 0.160  # meters between wheel centers
-MAX_VELOCITY = 6.67  # rad/s (motor limit)
+from geometry_msgs.msg import Twist
+from geometry_msgs.msg import TwistStamped
 
 # ── Circular motion parameters ────────────────────────────────
-# Slightly different speeds on each wheel → robot drives in a circle.
-# The small asymmetry also models real-world motor imperfection.
-LEFT_SPEED = 2.0  # rad/s
-RIGHT_SPEED = 2.2  # rad/s  ← intentionally different → drift
+# These produce a slow circle. The slight imprecision in angular
+# velocity means the robot won't return exactly to its start —
+# demonstrating odometric drift.
+LINEAR_SPEED = 0.15  # m/s  — forward speed
+ANGULAR_SPEED = 0.4  # rad/s — turning rate
+# Theoretical circle radius = LINEAR_SPEED / ANGULAR_SPEED = 0.375m
 
 
 class MotionController(Node):
 
-    def __init__(self, robot):
+    def __init__(self):
         super().__init__("motion_controller")
-        self.robot = robot
         self.driving = False
 
-        # ── Webots devices ────────────────────────────────────
-        timestep = int(robot.getBasicTimeStep())
-        self.timestep = timestep
+        # Publisher — sends velocity commands to the robot
+        self.cmd_pub = self.create_publisher(TwistStamped, "/cmd_vel", 10)
 
-        self.left_motor = robot.getDevice("left wheel motor")
-        self.right_motor = robot.getDevice("right wheel motor")
-        self.left_sensor = robot.getDevice("left wheel sensor")
-        self.right_sensor = robot.getDevice("right wheel sensor")
+        # Services — students call these to start/stop
+        self.create_service(Trigger, "start_driving", self.start_callback)
+        self.create_service(Trigger, "stop_driving", self.stop_callback)
 
-        # Motors: set to velocity mode (position = infinity)
-        self.left_motor.setPosition(float("inf"))
-        self.right_motor.setPosition(float("inf"))
-        self.left_motor.setVelocity(0.0)
-        self.right_motor.setVelocity(0.0)
-
-        # Enable wheel encoders
-        self.left_sensor.enable(timestep)
-        self.right_sensor.enable(timestep)
-
-        # ── Dead-reckoning state ──────────────────────────────
-        self.x = 0.0
-        self.y = 0.0
-        self.theta = 0.0
-        self.prev_left = 0.0
-        self.prev_right = 0.0
-        self.first_reading = True
-
-        # ── ROS2 services ─────────────────────────────────────
-        self.start_srv = self.create_service(
-            Trigger, "start_driving", self.start_callback
-        )
-        self.stop_srv = self.create_service(Trigger, "stop_driving", self.stop_callback)
-
-        # ── Publisher: dead-reckoning pose ────────────────────
-        self.pose_pub = self.create_publisher(Point, "/odom_deadreck", 10)
-
-        # ── Console print timer (every 2 seconds) ─────────────
-        self.print_timer = self.create_timer(2.0, self.print_position)
+        # Timer — publishes cmd_vel at 10 Hz while driving
+        self.create_timer(0.1, self.publish_cmd)
 
         self.get_logger().info(
-            "MotionController ready.\n"
-            "  Start: ros2 service call /start_driving std_srvs/srv/Trigger {}\n"
-            "  Stop:  ros2 service call /stop_driving  std_srvs/srv/Trigger {}"
+            "\n"
+            "  MotionController ready.\n"
+            "  Start the robot:\n"
+            "    ros2 service call /start_driving std_srvs/srv/Trigger {}\n"
+            "  Stop the robot:\n"
+            "    ros2 service call /stop_driving std_srvs/srv/Trigger {}\n"
         )
-
-    # ── Service callbacks ─────────────────────────────────────
 
     def start_callback(self, request, response):
         self.driving = True
-        self.left_motor.setVelocity(LEFT_SPEED)
-        self.right_motor.setVelocity(RIGHT_SPEED)
         self.get_logger().info(
-            f"Driving started. Left={LEFT_SPEED}, Right={RIGHT_SPEED} rad/s"
+            f"Driving started — linear={LINEAR_SPEED} m/s, "
+            f"angular={ANGULAR_SPEED} rad/s"
         )
         response.success = True
-        response.message = "Robot is now driving in a circle."
+        response.message = "Robot is driving in a circle."
         return response
 
     def stop_callback(self, request, response):
         self.driving = False
-        self.left_motor.setVelocity(0.0)
-        self.right_motor.setVelocity(0.0)
-        self.get_logger().info("Driving stopped.")
+        self.cmd_pub.publish(TwistStamped())
+        self.get_logger().info("Robot stopped.")
         response.success = True
         response.message = "Robot stopped."
         return response
 
-    # ── Dead-reckoning update (called every Webots timestep) ──
-
-    def update_odometry(self):
-        left_pos = self.left_sensor.getValue()
-        right_pos = self.right_sensor.getValue()
-
-        if self.first_reading:
-            self.prev_left = left_pos
-            self.prev_right = right_pos
-            self.first_reading = False
+    def publish_cmd(self):
+        if not self.driving:
             return
-
-        # Incremental encoder deltas (radians)
-        d_left = (left_pos - self.prev_left) * WHEEL_RADIUS
-        d_right = (right_pos - self.prev_right) * WHEEL_RADIUS
-        self.prev_left = left_pos
-        self.prev_right = right_pos
-
-        # Differential drive kinematics
-        d_center = (d_right + d_left) / 2.0
-        d_theta = (d_right - d_left) / WHEEL_DISTANCE
-
-        self.x += d_center * math.cos(self.theta + d_theta / 2.0)
-        self.y += d_center * math.sin(self.theta + d_theta / 2.0)
-        self.theta += d_theta
-
-        # Publish dead-reckoning position
-        msg = Point()
-        msg.x = self.x
-        msg.y = self.y
-        msg.z = self.theta
-        self.pose_pub.publish(msg)
-
-    def print_position(self):
-        """Print current dead-reckoning position to console."""
-        self.get_logger().info(
-            f"[Dead reckoning]  x={self.x:+.3f}m  y={self.y:+.3f}m  "
-            f"θ={math.degrees(self.theta):+.1f}°"
-        )
+        msg = TwistStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.twist.linear.x = LINEAR_SPEED
+        msg.twist.angular.z = ANGULAR_SPEED
+        self.cmd_pub.publish(msg)
 
 
 def main(args=None):
-    # WebotsController context: robot object is passed automatically
-    import sys
-    from controller import Robot
-
     rclpy.init(args=args)
-    robot = Robot()
-    node = MotionController(robot)
-
-    timestep = node.timestep
-
-    # Main loop: alternate between Webots step and ROS2 spin
-    while robot.step(timestep) != -1:
-        node.update_odometry()
-        rclpy.spin_once(node, timeout_sec=0)
-
+    node = MotionController()
+    rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
 
