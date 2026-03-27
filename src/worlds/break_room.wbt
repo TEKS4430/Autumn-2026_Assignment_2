@@ -48,16 +48,27 @@ TexturedBackground {
 TexturedBackgroundLight {
   texture "entrance_hall"
 }
-Floor {
+Solid {
   translation 0.243 0.93 0
   rotation 0 0 1 1.5708
-  size 7.7 12.86
-  appearance Parquetry {
-    type "light strip"
-    textureTransform TextureTransform {
-      rotation 1.57
-      scale 0.4 0.4
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColorMap ImageTexture {
+          url [
+            "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/samples/environments/indoor/worlds/textures/rustic_veneer_wood_base_color.jpg"
+          ]
+        }
+        roughness 0.8
+        metalness 0
+      }
+      geometry Plane {
+        size 7.7 12.86
+      }
     }
+  ]
+  boundingObject Plane {
+    size 7.7 12.86
   }
 }
 TurtleBot3Burger {

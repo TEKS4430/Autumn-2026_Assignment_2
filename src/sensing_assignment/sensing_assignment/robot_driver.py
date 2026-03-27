@@ -62,7 +62,7 @@ class RobotDriver:
         ) / (2 * WHEEL_RADIUS)
         left_speed = max(-MAX_SPEED, min(MAX_SPEED, left_speed))
         right_speed = max(-MAX_SPEED, min(MAX_SPEED, right_speed))
-        self.__left_motor.setVelocity(left_speed)
+        self.__left_motor.setVelocity(left_speed * 1.02)
         self.__right_motor.setVelocity(right_speed)
 
         # Odometry from encoders
