@@ -22,7 +22,8 @@
       <accelerometerName>accelerometer</accelerometerName>
     </plugin>
 
-    <plugin type="webots_ros2_control::Ros2Control" />
+    <!-- Python plugin: handles cmd_vel → motors directly -->
+    <plugin type="sensing_assignment.robot_driver.RobotDriver" />
 
     <device reference="Astra rgb" type="Camera">
       <ros>
@@ -45,19 +46,4 @@
     </device>
 
   </webots>
-
-  <ros2_control name="WebotsControl" type="system">
-    <hardware>
-      <plugin>webots_ros2_control::Ros2ControlSystem</plugin>
-    </hardware>
-    <joint name="left wheel motor">
-      <state_interface name="position"/>
-      <command_interface name="velocity"/>
-    </joint>
-    <joint name="right wheel motor">
-      <state_interface name="position"/>
-      <command_interface name="velocity"/>
-    </joint>
-  </ros2_control>
-
 </robot>
