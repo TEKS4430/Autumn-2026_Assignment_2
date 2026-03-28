@@ -14,6 +14,9 @@ def generate_launch_description():
         package_dir, "resource", "TurtleBot3Burger.urdf"
     )
 
+
+    webots_host = os.environ.get('WEBOTS_HOST', 'localhost')
+    
     turtlebot_driver = WebotsController(
         robot_name="TurtleBot3Burger",
         parameters=[
