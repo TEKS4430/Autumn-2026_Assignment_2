@@ -13,6 +13,7 @@ divided into three tasks that build on each other.
 
 ### Environment Setup
 
+##### Please follow the [first assingment](https://github.com/TEKS4430/Spring-2026_Task_1) for .env setup on different OS**
 The simulation runs in two parts:
 
 - **Webots** (runs on your host machine) — provides the 3D simulation
