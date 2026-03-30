@@ -2,105 +2,106 @@
 """
 task2_filter.py  — STUDENT TASK 2
 
-Goal: Clean up the noisy sensor data by implementing filters.
+Goal: Clean up noisy sensor data using simple filters.
       Publish cleaned versions of each sensor topic.
 
 Input topics:
-    /imu_noisy   (sensor_msgs/Imu)       — raw IMU with noise + drift
-    /scan_noisy  (sensor_msgs/LaserScan) — LiDAR with outliers
+    /imu_noisy   (sensor_msgs/Imu)        — IMU with constant gyro bias + noise
+    /scan_noisy  (sensor_msgs/LaserScan)  — LiDAR with outlier rays
 
-Output topics (you publish these):
-    /imu_filtered   (sensor_msgs/Imu)       — cleaned IMU
-    /scan_filtered  (sensor_msgs/LaserScan) — cleaned LiDAR
+Output topics you must publish:
+    /imu_filtered   (sensor_msgs/Imu)        — cleaned IMU
+    /scan_filtered  (sensor_msgs/LaserScan)  — cleaned LiDAR
 
 Filters to implement:
 
-    IMU — Moving average filter on angular_velocity.z
-        Keep a window of the last N gyro readings.
-        Replace each reading with the average of the window.
-        Effect: smooths out random noise.
-        Question: does it remove the drift (bias)? Why or why not?
+    IMU — Running average on angular_velocity.z
+        Keep a running mean that updates with each new reading:
+            self.gyro_z_avg = 0.9 * self.gyro_z_avg + 0.1 * new_reading
+        This smooths out random noise (the 0.1 factor controls how fast it adapts).
+        Note: this does NOT remove the constant bias — only reduces random noise.
 
-    LiDAR — Outlier rejection
-        If a reading is inf, NaN, < range_min, or > range_max → replace with 0.0
-        Optional: also apply a median filter across neighbouring rays.
+    LiDAR — Invalid ray removal
+        Replace any ray that is inf or below range_min with 0.0.
+        A value of 0.0 signals "no valid reading here".
 
-Deliverable:
-    This node must publish /imu_filtered and /scan_filtered.
-    Your task3_fusion.py will use /imu_filtered as input.
+Questions to answer in your report:
+    Q1. Compare angular_velocity.z in /imu_noisy vs /imu_filtered.
+        Does the running average remove the constant offset (bias)?
+        Why or why not?
+    Q2. After filtering the LiDAR, what fraction of rays are now 0.0?
+        Are these the same rays you identified as invalid in Task 1?
 """
 
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Imu, LaserScan
 import math
-from collections import deque
 
 
 class SensorFilter(Node):
 
     def __init__(self):
-        super().__init__("sensor_filter")
+        super().__init__('sensor_filter')
 
-        # ── Parameters ────────────────────────────────────────
-        # Moving average window size for IMU
-        self.window_size = 10  # TODO: experiment with different values
-
-        # ── State ─────────────────────────────────────────────
-        self.gyro_z_window = deque(maxlen=self.window_size)
+        # Running average state for gyro Z
+        self.gyro_z_avg = 0.0
 
         # ── Subscribers ───────────────────────────────────────
-        self.imu_sub = self.create_subscription(
-            Imu, "/imu_noisy", self.imu_callback, 10
-        )
-        self.scan_sub = self.create_subscription(
-            LaserScan, "/scan_noisy", self.scan_callback, 10
-        )
+        self.create_subscription(
+            Imu, '/imu_noisy', self.imu_callback, 10)
+        self.create_subscription(
+            LaserScan, '/scan_noisy', self.scan_callback, 10)
 
         # ── Publishers ────────────────────────────────────────
-        self.imu_pub = self.create_publisher(Imu, "/imu_filtered", 10)
-        self.scan_pub = self.create_publisher(LaserScan, "/scan_filtered", 10)
+        self.imu_pub  = self.create_publisher(Imu, '/imu_filtered', 10)
+        self.scan_pub = self.create_publisher(LaserScan, '/scan_filtered', 10)
 
         self.get_logger().info(
-            "SensorFilter started.\n"
-            "  /imu_noisy   → /imu_filtered\n"
-            "  /scan_noisy  → /scan_filtered"
+            'SensorFilter started.\n'
+            '  /imu_noisy   → /imu_filtered\n'
+            '  /scan_noisy  → /scan_filtered'
         )
 
     # ─────────────────────────────────────────────────────────
-    # TODO 2a: IMU moving average filter
+    # TODO 2a: IMU running average filter
     #
-    # 1. Add msg.angular_velocity.z to self.gyro_z_window
-    # 2. Compute the mean of self.gyro_z_window
-    # 3. Create a new Imu message (copy the original)
-    # 4. Replace angular_velocity.z with the moving average
-    # 5. Publish on /imu_filtered
+    # 1. Update the running average:
+    #      self.gyro_z_avg = 0.9 * self.gyro_z_avg + 0.1 * msg.angular_velocity.z
     #
-    # Question: compare the filtered vs raw gyro_z values.
-    # Does the filter remove the constant bias? Why not?
-    # How would you remove a constant bias?
+    # 2. Create a new Imu message, copy the original, and replace
+    #    angular_velocity.z with self.gyro_z_avg.
+    #
+    # 3. Publish the filtered message on /imu_filtered.
+    #
+    # Hint — how to copy and modify a message:
+    #   filtered = Imu()
+    #   filtered.header              = msg.header
+    #   filtered.angular_velocity    = msg.angular_velocity
+    #   filtered.linear_acceleration = msg.linear_acceleration
+    #   filtered.angular_velocity.z  = self.gyro_z_avg   # override z only
     # ─────────────────────────────────────────────────────────
     def imu_callback(self, msg: Imu):
-        # TODO: implement moving average filter on gyro Z
-        # Then publish the filtered message
+        # TODO: apply running average to gyro Z and publish
         pass
 
     # ─────────────────────────────────────────────────────────
-    # TODO 2b: LiDAR outlier rejection
+    # TODO 2b: LiDAR invalid ray removal
     #
-    # 1. Copy the incoming LaserScan message
-    # 2. For each range value:
-    #    - If it is inf, NaN, < range_min, or > range_max
-    #      → replace it with 0.0 (indicates invalid)
-    # 3. Publish the cleaned scan on /scan_filtered
+    # 1. Copy the incoming LaserScan into a new message.
+    # 2. Go through each value in msg.ranges:
+    #    - If it is inf or below msg.range_min → replace with 0.0
+    #    - Otherwise keep the original value
+    # 3. Publish the cleaned scan on /scan_filtered.
     #
-    # Optional (bonus): implement a 3-point median filter
-    #   For each ray i, replace ranges[i] with the median of
-    #   ranges[i-1], ranges[i], ranges[i+1]
+    # Hint:
+    #   ranges = list(msg.ranges)   # make a mutable copy
+    #   for i in range(len(ranges)):
+    #       if math.isinf(ranges[i]) or ranges[i] < msg.range_min:
+    #           ranges[i] = 0.0
     # ─────────────────────────────────────────────────────────
     def scan_callback(self, msg: LaserScan):
-        # TODO: implement outlier rejection
-        # Then publish the filtered message
+        # TODO: remove invalid rays and publish
         pass
 
 
@@ -112,5 +113,5 @@ def main(args=None):
     rclpy.shutdown()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

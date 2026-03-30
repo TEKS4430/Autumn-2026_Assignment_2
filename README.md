@@ -9,11 +9,22 @@ simulated in Webots. The robot is equipped with a LiDAR scanner, an IMU (gyrosco
 accelerometer), wheel encoders (odometry), and an Astra RGB-D camera. The assignment is
 divided into three tasks that build on each other.
 
+Webots physics is ideal — motors execute commands perfectly. To make the simulation
+realistic, two types of sensor error are deliberately introduced by the provided code:
+
+- **Odometry drift** — the robot driver models a small wheel size mismatch (right wheel
+  2.4% larger than left). The reported heading drifts from the true heading over time,
+  accumulating approximately 6° of error after 3 circles.
+- **IMU drift** — the noise injector adds a constant gyro bias of `0.015 rad/s` on the
+  Z axis. This integrates to approximately 40° of heading error after 3 circles.
+
 ---
 
 ### Environment Setup
 
 ##### Please follow the [first assingment](https://github.com/TEKS4430/Spring-2026_Task_1) for .env setup on different OS**
+The simulation runs in two parts:
+
 The simulation runs in two parts:
 
 - **Webots** (runs on your host machine) — provides the 3D simulation
@@ -102,63 +113,35 @@ starting position — but it does not. This is sensor drift.
 3. **TODO 1c** — Count total and outlier LiDAR rays from `/scan_noisy`.
    An outlier is: `inf`, `NaN`, below `range_min`, or above `range_max`.
 
-4. **TODO 1d** — Every 5 seconds, print mean and standard deviation of
-   gyro Z samples, and the outlier percentage in the LiDAR scan.
-   Clear the sample buffer after printing.
-
-**Questions to answer in your report:**
-
-- Q1. What is the odometry position after 3 full circles? Should it be `(0, 0)`?
-- Q2. What is the mean and standard deviation of `angular_velocity.z` when the
-  robot is stationary? What does a non-zero mean tell you?
-- Q3. What percentage of LiDAR rays appear to be outliers? How did you identify them?
-
-**Hint — computing standard deviation without numpy:**
-```python
-mean = sum(samples) / len(samples)
-std  = math.sqrt(sum((x - mean)**2 for x in samples) / len(samples))
-```
 
 ---
 
 ### Task 2 — Sensor Filtering
-
+ 
 **File:** `sensing_assignment/task2_filter.py`
-
-**Goal:** Implement filters to clean up noisy sensor data and publish cleaned versions.
-
+ 
+**Goal:** Apply simple filters to clean up the noisy sensor data.
+Publish cleaned versions that Task 3 will use.
+ 
 **What to implement:**
-
-1. **TODO 2a** — Moving average filter on `angular_velocity.z` from `/imu_noisy`.
-   - Keep a sliding window of the last N readings (`self.gyro_z_window`, size 10)
-   - Replace each new reading with the window average
-   - Publish the result on `/imu_filtered`
-   - **Question:** Does the moving average remove the constant gyro bias? Why not?
-
-2. **TODO 2b** — Outlier rejection on `/scan_noisy`.
-   - For each range value: if it is `inf`, `NaN`, below `range_min`, or above
-     `range_max`, replace it with `0.0`
-   - Publish the cleaned scan on `/scan_filtered`
-   - **Bonus:** Implement a 3-point median filter — replace each ray with the
-     median of itself and its two neighbours
-
-**Hint — copying a ROS2 message:**
-You cannot modify a received message directly. Create a new one and copy fields:
-```python
-from sensor_msgs.msg import Imu
-filtered = Imu()
-filtered.header = msg.header
-filtered.angular_velocity = msg.angular_velocity  # then modify z
-```
-
-**Hint — checking for invalid float values:**
-```python
-import math
-if math.isinf(value) or math.isnan(value):
-    # invalid reading
-```
-
----
+ 
+1. **TODO 2a** — Running average filter on IMU gyro Z from `/imu_noisy`.
+   Update a single running average value each time a new reading arrives:
+   ```python
+   self.gyro_z_avg = 0.9 * self.gyro_z_avg + 0.1 * msg.angular_velocity.z
+   ```
+   Copy the IMU message, replace `angular_velocity.z` with `self.gyro_z_avg`,
+   and publish on `/imu_filtered`.
+ 
+2. **TODO 2b** — Invalid ray removal on `/scan_noisy`.
+   Replace any ray that is `inf` or below `range_min` with `0.0`,
+   then publish the cleaned scan on `/scan_filtered`.
+   ```python
+   ranges = list(msg.ranges)
+   for i in range(len(ranges)):
+       if math.isinf(ranges[i]) or ranges[i] < msg.range_min:
+           ranges[i] = 0.0
+   ```
 
 ### Task 3 — Sensor Fusion
 
@@ -167,17 +150,36 @@ if math.isinf(value) or math.isnan(value):
 **Goal:** Combine odometry and IMU to get a better heading estimate than either
 sensor alone, using a complementary filter.
 
-**The problem:**
-- Odometry heading drifts slowly — it accumulates error from wheel slip
-- IMU gyro heading drifts faster — it has a constant bias that integrates over time
-- A complementary filter blends both to reduce the total error
+**Why both sensors drift:**
 
-**The complementary filter:**
+Odometry is computed from wheel encoder readings. The robot's wheels are modelled
+with a small size mismatch (left and right wheels have slightly different radii),
+which is realistic — real robots are never perfectly calibrated. Equal motor commands
+produce slightly unequal distances, so the reported heading slowly drifts from the
+true heading over time.
+
+The IMU gyroscope has a constant bias injected by `noise_injector.py`
+(`0.015 rad/s` on the Z axis). Even when the robot is stationary, the gyro reports
+a small non-zero rotation rate. When this is integrated over time to get heading,
+the error grows linearly — approximately `13.5°` per circle at the commanded speed.
+
+**Why fusion helps:**
+
+Neither sensor alone is reliable over many circles. But their errors have different
+characters — odometry accumulates slowly and consistently, IMU accumulates faster
+but could in principle be corrected. A complementary filter blends both:
+
 ```
 yaw_fused = alpha * yaw_odom + (1 - alpha) * yaw_imu_integrated
 ```
 
-where `alpha = 0.98` means "trust odometry 98%, correct slowly with IMU."
+**Tuning alpha:**
+- `alpha = 1.0` — use only odometry (ignores IMU entirely)
+- `alpha = 0.0` — use only IMU integration (accumulates bias rapidly)
+- `alpha = 0.98` — trust odometry heavily, small IMU correction
+- `alpha = 0.70` — stronger IMU contribution, may help or hurt depending on drift
+
+There is no single correct value — students should experiment and report what they find.
 
 **What to implement:**
 
@@ -203,24 +205,32 @@ where `alpha = 0.98` means "trust odometry 98%, correct slowly with IMU."
    msg.pose.orientation.w = math.cos(self.yaw_fused / 2)
    ```
 
-**How to evaluate without ground truth:**
-The robot drives in a circle and should return to heading `0°` (= 360°) after
-one full lap. The console prints heading from all three sources every 3 seconds.
-After completing circles, compare:
+**How to evaluate:**
+The robot drives in circles. After each circle it should return to heading `0°`
+(equivalently `360°`). The console prints all three headings every 3 seconds.
+Expected drift after 3 circles (approx. 47 seconds of driving):
 
 ```
-Odom heading:  358.4°   → 1.6° error
-IMU heading:   364.2°   → 4.2° error (bias accumulated)
-Fused heading: 359.6°   → 0.4° error  ← best
+Odom heading:  ~354°   → ~6° error   (wheel radius mismatch)
+IMU heading:   ~400°   → ~40° error  (gyro bias 0.015 rad/s × 47s integrated)
+Fused (α=0.98) ~354°   → ~6° error   (mostly odometry — fusion barely changes it)
+Fused (α=0.70) ~367°   → ~7° error   (too much IMU weight makes things worse here)
 ```
+
+This shows that with a large gyro bias and moderate odometry drift, high alpha
+(trusting odometry) is the right strategy. The interesting question for students
+is: when would low alpha (trusting IMU more) be better?
 
 **Questions to answer in your report:**
 
-- Q1. What happens when `alpha = 1.0` (only odometry)?
-- Q2. What happens when `alpha = 0.0` (only IMU integration)?
-- Q3. What value of `alpha` gave the smallest heading error after 3 circles?
-- Q4. Does the complementary filter remove the gyro bias? What would be needed
-  to fully remove a constant bias?
+- Q1. What is the heading error from odometry alone after 3 circles?
+- Q2. What is the heading error from IMU integration alone after 3 circles?
+  Why is it so much larger than odometry?
+- Q3. What value of `alpha` gave the best fused result? Explain why.
+- Q4. The complementary filter does not remove the gyro bias — it only reduces
+  its effect. What would be needed to fully correct for a constant gyro bias?
+- Q5. In a real robot without injected noise, which sensor would you trust more
+  for short-term heading estimation — odometry or gyro? Why?
 
 ---
 
