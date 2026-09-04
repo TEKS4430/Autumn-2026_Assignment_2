@@ -25,12 +25,16 @@ realistic, two types of sensor error are deliberately introduced by the provided
 ##### Please follow the [first assingment](https://github.com/TEKS4430/Autumn-2026_Task_1) for .env setup on different OS**
 The simulation runs in two parts:
 
-The simulation runs in two parts:
-
 - **Webots** (runs on your host machine) — provides the 3D simulation
 - **ROS2 Jazzy** (runs inside a Docker container) — processes sensor data
 
-Start Webots and open the world file, then inside the container:
+Start Webots and open the world file.
+
+###### Note: When opening the world file, Webots may show errors about missing PROTO files and the robot may appear white. This is a cosmetic issue caused by network connectivity to GitHub's asset server. The simulation functions correctly — the robot, LiDAR, and all sensors work normally. Closing the webots simulator and reopening it works for me.
+
+
+
+Then inside the container:
 
 ```bash
 cd /ros2_ws
@@ -50,6 +54,9 @@ To stop the robot:
 ```bash
 ros2 service call /stop_driving std_srvs/srv/Trigger {}
 ```
+
+
+###### Note: If the simulation seems too heavy for your machine, for example lags a lot or freezes everything, try removing the camera from the TurtleBot3Burger node on the left panel. You can find the camera under TurtleBot3Burger -> extensionSlot -> Astra. The camera is just for visual purpose, you won't need that for any assignment task. You can also remove objects from the scene to make it more simple to render.
 
 ---
 
