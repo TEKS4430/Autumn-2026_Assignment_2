@@ -1,4 +1,4 @@
-# Autumn-2026_Task_2
+# Autumn-2026_Assignment_2
 
 ## Part A
 
@@ -22,7 +22,7 @@ realistic, two types of sensor error are deliberately introduced by the provided
 
 ### Environment Setup
 
-##### Please follow the [first assingment](https://github.com/TEKS4430/Autumn-2026_Task_1) for .env setup on different OS**
+##### Please follow the [first assingment](https://github.com/TEKS4430/Autumn-2026_Assignment_1) for .env setup on different OS**
 The simulation runs in two parts:
 
 - **Webots** (runs on your host machine) — provides the 3D simulation
@@ -310,8 +310,8 @@ We recommend using Microsoft Teams, as it allows you to record both your screen 
 
 **Important:** You must ensure that your recording is accessible to others who have the link. So, via Sharepoint user interface in your browser (see below) define the shared settings so that anyone who has the link can access the file for maximum number of days. Finally, you should ensure for example in privacy mode or another browser that the link is truly accessible without login.
 
-![create_sharelink](https://github.com/TEKS4430/Autumn-2026_Task_1/blob/main/screenshots/accessrights.png)
+![create_sharelink](https://github.com/TEKS4430/Autumn-2026_Assignment_1/blob/main/screenshots/accessrights.png)
 
 <p align="center">
-<img src="https://github.com/TEKS4430/Autumn-2026_Task_1/blob/main/screenshots/link_settings.png" width=50% height=50%>    
+<img src="https://github.com/TEKS4430/Autumn-2026_Assignment_1/blob/main/screenshots/link_settings.png" width=50% height=50%>    
 </p>
