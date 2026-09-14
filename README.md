@@ -278,24 +278,105 @@ sensing_assignment/
     └── ros2control.yml
 ```
 
-## Part B: Use of AI tools and self-reflection
-In part B, you will reflect on the new skills you have learned and analyze your own work and learning process. You will consider what technical skills you learned while completing part A, what tools you used, why you chose to use them, and what benefits or challenges were associated with their use.
 
-If you did not use AI tools, you should focus on self-reflection regarding your own learning process and discuss your motivations for not using AI as a tool.
+## Part B: Learning process, use of AI tools, and self-reflection — 4 points
 
-The use of AI tools is also allowed in completing part B. However, you should still take responsibility for your own learning and approach the reporting seriously. Ultimately, you are studying for your own benefit.
+Part B is an equally important part of the assignment as the technical implementation in Part A. The purpose is to reflect on **what you learned, how you worked, and how AI or other tools and resources affected your learning and problem-solving process**.
 
-The use of AI must be reported transparently and appropriately (this is also required by university policies). When completing Sections A and B (note: AI use is generally prohibited in part C), you must keep detailed records of:
+You are **not assessed based on how much AI you use**. You may use AI extensively, selectively, or not at all. Instead, you are assessed based on the quality of your reflection, your critical evaluation of your working and learning process, and your demonstrated understanding and ownership of the final solution.
 
-- which AI tools you used (e.g., Claude, ChatGPT, Copilot, Gemini, Codex, VSCode extensions, etc.),
+### If you did not use AI
 
-- the specific language model version (e.g., Sonnet 4.6, GPT-5.4),
+Using AI is **not required and does not affect the maximum number of points available**.
 
-- and the settings or modes used (e.g., thinking mode, instant mode, or agent mode).
+If you chose not to use AI, explain why and focus instead on **how you learned and solved the assignment independently**. Describe the resources, tools, documentation, experimentation, debugging, discussions, or other approaches you used to understand the technical concepts and overcome problems.
 
-You may also use any other models or technologies, such as locally running language models in your own environment (for example, models run through environments like Ollama) or other AI agent systems.
+The same assessment criteria apply: the important thing is to demonstrate and critically reflect on **how you worked, what you learned, and how you evaluated the correctness of your solution**.
 
-The primary motivation of this section is to encourage continuous reflection on your learning, both in terms of technical skills and the technologies used to implement solutions.
+In your presentation, address the following four areas:
+
+### 1. What did you learn?
+
+Describe the most important things you learned while completing Part A.
+
+Focus especially on your **technical learning**. For example, in this assignment you might discuss what you learned about sensor data, noise and drift, filtering, sensor fusion, ROS2 topics, or implementing and debugging the provided code.
+
+Do not simply describe what you did. Explain **what you understand now that you did not understand before the assignment**.
+
+**If you used AI:** Explain how AI helped you understand new concepts, code, technologies, or problems and how your understanding developed through this interaction.
+
+**If you did not use AI:** Explain how you developed this understanding. For example, did you study course materials or documentation, search for examples, experiment with the system, inspect code, discuss problems with others, or learn through trial and error?
+
+### 2. How did you solve problems and use AI, tools, and other resources?
+
+Describe **how you approached the assignment and solved the technical problems you encountered**.
+
+**If you used AI**, explain the significant ways in which AI contributed to your work. For each important use, consider:
+
+- what you were trying to accomplish or understand;
+- which tool and model you used;
+- why you decided to use AI for this particular purpose;
+- how you used it; and
+- how useful the result was.
+
+You do not need to report every individual prompt. Instead, focus on the **most important ways in which AI influenced your work**.
+
+You must nevertheless transparently identify the AI tools and models you used in Parts A and B, including the model/version and relevant mode or settings when this information is available.
+
+For example:
+
+> I used ChatGPT with GPT-X in thinking mode to understand why integrating a small constant gyroscope bias produces an increasing heading error. I then used it to help interpret the results produced by my implementation.
+
+**If you did not use AI:** Describe the corresponding problem-solving process. What resources or tools did you use instead? How did you find the information you needed? How did you approach debugging or unfamiliar technical concepts? Explain why you chose these approaches and how useful they were.
+
+### 3. Critically evaluate your tools and problem-solving process
+
+Choose at least **one concrete example of a problem, challenge, or learning situation** from the assignment and analyze how you addressed it.
+
+**If you used AI**, this could be a situation where AI:
+
+- significantly helped you;
+- produced an incomplete or incorrect answer;
+- suggested an approach that needed modification; or
+- provided information whose correctness you needed to verify.
+
+Explain what AI suggested, whether the suggestion was useful, **how you determined whether you could trust it**, and how you tested, modified, improved, or rejected the suggestion.
+
+**If you did not use AI:** Select a corresponding technical challenge and explain how you investigated and solved it. For example, describe how you used documentation, course materials, experimentation, debugging, testing, online resources, or discussions with others. Consider whether your initial approach worked, how you evaluated different alternatives, and how you verified that the final solution was correct.
+
+The purpose is to demonstrate that you can **critically evaluate information, tools, and proposed solutions rather than simply accepting them**.
+
+### 4. Reflect on your own learning and working process
+
+Finally, reflect on your overall experience and how you approached learning during the assignment.
+
+Consider questions such as:
+
+- What was the most difficult part of the assignment?
+- What did you understand better after completing it?
+- Which problem-solving or learning approaches worked particularly well?
+- Which approaches did not work well?
+- How did you verify that you understood the technical concepts rather than merely producing a working solution?
+- If you completed the assignment again, what would you do differently?
+
+**If you used AI:** Also consider whether AI made you more productive or helped you learn, whether it introduced additional problems or confusion, and whether there were situations where solving or studying something without AI was more useful.
+
+**If you did not use AI:** Reflect on how effective your chosen learning and problem-solving strategies were. Consider whether documentation, experimentation, debugging, course materials, discussions, or other resources supported your learning effectively and whether another approach could have made your work or learning more effective.
+
+Your reflection should demonstrate that **you understand and take responsibility for the work you submitted**, regardless of whether or how much AI contributed to the process.
+
+---
+
+### Assessment of Part B
+
+| Points | Criteria |
+|---|---|
+| **4 – Excellent** | Provides specific and insightful reflection on technical learning and the working process. The tools, resources, and problem-solving approaches used are transparently documented and critically evaluated using concrete examples. When AI was used, its role and outputs are critically evaluated and their verification is explained. When AI was not used, alternative learning and problem-solving approaches are analyzed with comparable depth. The student clearly demonstrates understanding and ownership of the final solution. |
+| **3 – Good** | Clearly describes learning, working methods, and the tools or resources used and provides meaningful reflection on their benefits and limitations. Concrete examples are provided, although the critical analysis or reflection lacks some depth. |
+| **2 – Satisfactory** | Describes what was learned and the main tools, resources, or approaches used, but the discussion remains mainly descriptive. There is limited critical evaluation of the problem-solving process, verification of information or solutions, or the student's own learning. |
+| **1 – Limited** | Provides only superficial reporting. Tools, resources, or activities may be listed, but there is little discussion of learning, why particular approaches were chosen, their limitations, or how problems and technical questions were actually resolved. |
+| **0 – Insufficient** | The required reporting or reflection is missing or does not provide sufficient evidence of the student's learning and working process. AI use has not been transparently reported where applicable. |
+
 
 
 ## Returning instructions
