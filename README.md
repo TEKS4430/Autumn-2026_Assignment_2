@@ -1,6 +1,6 @@
 # Autumn-2026_Assignment_2
 
-## Part A
+## Part A: Studying and technical implementation — 4 points
 
 ### Overview
 
