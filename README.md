@@ -278,6 +278,7 @@ sensing_assignment/
     └── ros2control.yml
 ```
 
+---
 
 ## Part B: Learning process, use of AI tools, and self-reflection — 4 points
 
@@ -366,17 +367,6 @@ Consider questions such as:
 Your reflection should demonstrate that **you understand and take responsibility for the work you submitted**, regardless of whether or how much AI contributed to the process.
 
 ---
-
-### Assessment of Part B
-
-| Points | Criteria |
-|---|---|
-| **4 – Excellent** | Provides specific and insightful reflection on technical learning and the working process. The tools, resources, and problem-solving approaches used are transparently documented and critically evaluated using concrete examples. When AI was used, its role and outputs are critically evaluated and their verification is explained. When AI was not used, alternative learning and problem-solving approaches are analyzed with comparable depth. The student clearly demonstrates understanding and ownership of the final solution. |
-| **3 – Good** | Clearly describes learning, working methods, and the tools or resources used and provides meaningful reflection on their benefits and limitations. Concrete examples are provided, although the critical analysis or reflection lacks some depth. |
-| **2 – Satisfactory** | Describes what was learned and the main tools, resources, or approaches used, but the discussion remains mainly descriptive. There is limited critical evaluation of the problem-solving process, verification of information or solutions, or the student's own learning. |
-| **1 – Limited** | Provides only superficial reporting. Tools, resources, or activities may be listed, but there is little discussion of learning, why particular approaches were chosen, their limitations, or how problems and technical questions were actually resolved. |
-| **0 – Insufficient** | The required reporting or reflection is missing or does not provide sufficient evidence of the student's learning and working process. AI use has not been transparently reported where applicable. |
-
 
 
 ## Returning instructions
